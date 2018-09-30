@@ -1,0 +1,5 @@
+wikienv/*
+config.json
+__init__.py
+static/images/grouppics/*
+static/images/recipeimages/*
