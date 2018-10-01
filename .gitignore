@@ -3,3 +3,6 @@ config.json
 __init__.py
 static/images/grouppics/*
 static/images/recipeimages/*
+wikieats.ini
+wsgi.py
+__pycache__/*
