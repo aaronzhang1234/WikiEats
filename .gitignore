@@ -6,3 +6,4 @@ static/images/recipeimages/*
 wikieats.ini
 wsgi.py
 __pycache__/*
+*.pyc

@@ -163,7 +163,7 @@ def my_utility_processor():
         cmd = "SELECT title, description, imagename FROM generalrecipes WHERE recipeid = %s"
         cur.execute(cmd, (recipeid, ))
         recipe = cur.fetchone()
-        return '<div class="item'+active+'"><img style="display:block;margin:auto;width:90%" src="../static/images/recipeimages/'+recipe[2]+'" alt="'+recipe[0]+'" width="500" height="345"><div class="carousel-caption"><h3>'+recipe[0]+'</h3><p>'+recipe[1]+'</p></div></div>'
+        return '<div class="item'+active+'"><img style="display:block;margin:auto;height:50vh;width:auto" src="../static/images/recipeimages/'+recipe[2]+'" alt="'+recipe[0]+'""><div class="carousel-caption"><h3>'+recipe[0]+'</h3><p>'+recipe[1]+'</p></div></div>'
     return dict(printrecipe=printrecipe, printstep=printstep, printreview=printreview,isPinned=isPinned, isLeader=isLeader, inGroup=inGroup, printuser=printuser, isFollowing=isFollowing, printgroup=printgroup, printcarousel=printcarousel) 
 @app.route('/')
 def wikieats():
@@ -268,16 +268,18 @@ def addrecipe():
     conn = psycopg2.connect("dbname=wikieats user=aaronadd password="+conf['aaronadd']+"")  
     cur = conn.cursor()
     session['right_extension'] = True
-    mainpic = request.files['mainpic']
-    mainpicname = secure_filename(mainpic.filename) 
     # If the user didn't upload a picture then put the default one in
     cmd = "SELECT last_value FROM generalrecipes_recipeid_seq"
     cur.execute(cmd)
     num = cur.fetchone()
     mainpicnum = num[0]+1
-    if mainpicname=="":
-        mainpicname = "chefhat.png"
+    counter = 1;
+    if request.form.get('mainpic') == '':
+        mainpicname = "chef_hat.png"
+        counter = counter+1
     else:
+        mainpic = request.files['mainpic']
+        mainpicname = secure_filename(mainpic.filename) 
         pic_array = mainpicname.split('.')
         extension = pic_array[-1]
         if extension not in allowed_extensions:
@@ -285,8 +287,8 @@ def addrecipe():
             return redirect(url_for('addrecipepage'))
         # Rename the picture to the recipeid it will be, this SQL command is selecting the next recipeid as a number
         mainpicname = str(num[0]+1)+'.png'
-    # Actually saving the picture in the path
-    mainpic.save(os.path.join(app.config['UPLOAD_FOLDER'],mainpicname))
+        # Actually saving the picture in the path
+        mainpic.save(os.path.join(app.config['UPLOAD_FOLDER'],mainpicname))
     # Inserting the recipe information into the database
     cmd = 'INSERT INTO generalrecipes(userid, title, description,category,imagename) VALUES(%s, %s, %s, %s, %s)'
     cur.execute(cmd, (session.get('userid'), cgi.escape(request.form['recipename']), cgi.escape(request.form['description']), request.form['FoodCategory'], mainpicname))
@@ -297,31 +299,28 @@ def addrecipe():
     count = 1
     # The reason why this whileloop is going from 1 to whatever the len-4 is because there are four other elements in the form other than the steps
     # A generally bruteforcing way
-    while count <=len(request.form)-4:
+    while counter <=len(request.form)-4:
         # This is getting the name of the form input so it can request the data
         stepnum = 'step'+str(count)
         imagenum = 'image'+str(count)
         stepdescription = request.form[stepnum]
         # Generally the same image upload as last time
-        steppic = request.files[imagenum]
-        steppicname = secure_filename(steppic.filename)
-        if steppic.filename =="":
-            steppicname = "chefhat.png"
+        if request.form.get(imagenum) == '':
+            steppicname = "chef_hat.png"
+            counter=counter+1
         else:
-            #pic_array = steppicname.split('.')
-            #extension = pic_array[-1]
-            #if extension not in allowed_extensions:
-            #    session['right_extension'] = False
-            #    return redirect(url_for('addrecipepage'))
             # However this is renaming the image to the recipeid plus an underscore and the stepid
             # Step 2 in recipe #4  will be renamed 4_2  
+            steppic = request.files[imagenum]
+            steppicname = secure_filename(steppic.filename)
             steppicname = str(mainpicnum)+'_'+str(count)+'.png'
-        steppic.save(os.path.join(app.config['UPLOAD_FOLDER'], steppicname))
+            steppic.save(os.path.join(app.config['UPLOAD_FOLDER'], steppicname))
         # Inserting the information into the database
         cmd = 'INSERT INTO recipesteps(recipeid, stepnumber, stepdescription, imagename) VALUES(%s, %s, %s, %s)'
         cur.execute(cmd, (recipeid[0], count, stepdescription, steppicname))
         conn.commit()
         count = count+1
+        counter = counter+1
     return redirect(url_for('displayrecipe', recipeid = recipeid[0]))
 @app.route('/recipe/<recipeid>', methods=['GET'])
 def displayrecipe(recipeid):
@@ -630,7 +629,7 @@ def createaccount():
     cmd = 'SELECT userid FROM users WHERE username = %s'
     cur.execute(cmd, (request.form['username'],))
     # If there is already the username active or the person put the wrong code, errors and redirect
-    if cur.fetchone() is not None or request.form['verification'] != conf['wikieatsjoin']:
+    if cur.fetchone() is not None:
         return redirect(url_for('createaccountpage'))
         session['error'] = True
     else:
